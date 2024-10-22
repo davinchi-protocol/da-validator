@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  lighthouse_init:
+    image: "sigp/lighthouse:v4.5.0"
+    container_name: lighthouse_init
+    command: 
+      - lighthouse
+      - account
+      - validator
+      - import
+      - --testnet-dir=/metadata
+      - --datadir=/validator
+      - --directory=/validator_keys
+      - --password-file=/metadata/password.txt
+      - --reuse-password
+    volumes:
+      - ./metadata:/metadata
+      - ./validator:/validator
+      - ./validator_keys:/validator_keys
