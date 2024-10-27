@@ -1,0 +1,1 @@
+docker run -it --rm -v $(pwd)/validator_keys:/app/validator_keys ghcr.io/davinchi-protocol/da-stake:main existing-mnemonic --num_validators=1 --validator_start_index=0

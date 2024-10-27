@@ -19,7 +19,7 @@ while read x; do
    ethereal beacon deposit \
       --allow-unknown-contract=true \
       --address="0xdeadbeef00000000000000000000000000000000" \
-      --connection=https://mainnet-rpc.davinchi.bz \
+      --connection=https://rpc.davinci.bz \
       --data="$x" \
       --allow-excessive-deposit \
       --value="$amount" \
