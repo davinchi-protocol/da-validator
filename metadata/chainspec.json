@@ -1,5 +1,5 @@
 {
-  "name": "Testnet",
+  "name": "Mainnet",
   "engine": {
     "Ethash": {}
   },
@@ -51,14 +51,7 @@
     "eip1153TransitionTimestamp": "0x0",
     "eip5656TransitionTimestamp": "0x0",
     "eip6780TransitionTimestamp": "0x0",
-    "depositContractAddress": "0xdeadbeef00000000000000000000000000000000",
-    "eip2537TransitionTimestamp": "0x6722d8f4",
-    "eip2935TransitionTimestamp": "0x6722d8f4",
-    "eip6110TransitionTimestamp": "0x6722d8f4",
-    "eip7002TransitionTimestamp": "0x6722d8f4",
-    "eip7251TransitionTimestamp": "0x6722d8f4",
-    "eip7702TransitionTimestamp": "0x6722d8f4",
-    "eip7692TransitionTimestamp": "0x69610f74"
+    "depositContractAddress": "0xdeadbeef00000000000000000000000000000000"
   },
   "genesis": {
     "seal": {
@@ -69,7 +62,7 @@
     },
     "difficulty": "0x01",
     "author": "0x0000000000000000000000000000000000000000",
-    "timestamp": "0x671720b8",
+    "timestamp": "0x67259113",
     "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
     "extraData": "",
     "gasLimit": "0x17d7840"
@@ -908,6 +901,9 @@
     },
     "0xd5b0d4AC768EA7Eb241981DE9563B3656Ac0464B": {
       "balance": "999000000000000000000000000000"
+    },
+    "0x89FFD9Fa465cB35a07Bd067A4d0d6aa125992F86": {
+      "balance": "1000000000000000000000"
     }
   },
   "nodes": []
