@@ -13,7 +13,7 @@ text_yellow(){
     echo -e "\e[33m$1\e[0m"
 }
 
-OS="Linux"
+OS="Linux Ubuntu"
 
 # ====================== VERSION AND BUILT ====================== #
 
@@ -104,7 +104,7 @@ davinci_init() {
     echo "Initializing Davinci Node Validator..."
     echo "Cloning Davinci Node Validator repository..."
     git clone https://github.com/davinchi-protocol/da-validator $INSTALLATION_PATH
-    # bash $INSTALLATION_PATH/scripts/install-asdf.sh
+    bash $INSTALLATION_PATH/scripts/install-asdf.sh
     return 0
 }
 
@@ -130,43 +130,66 @@ davinci_validator_build(){
     while true; do
         echo ""
         echo 
-        read -p "How many validators you want create: " validator_count
-        if [[ "$validator_count" =~ ^[0-9]+$ ]]; then
+        read -p "How many validators you want create: " validator_max
+        if [[ "$validator_max" =~ ^[0-9]+$ ]]; then
             break
         else
             echo "Please enter a valid number."
         fi
     done
-    validator_count_file="$INSTALLATION_PATH/validator_count"
-    if [ -f "$validator_count_file" ]; then
-        echo "Last validator count: $(cat $validator_count_file)"
-    else
-        echo 0 > "$validator_count_file"
-    fi
-    validator_count_last=$(cat "$validator_count_file")
-    docker run -it --rm -v $INSTALLATION_PATH/validator_keys:/app/validator_keys ghcr.io/davinchi-protocol/da-stake:main existing-mnemonic --num_validators=$validator_count --validator_start_index=$validator_count_last --chain=davinchi
+    read -p "Enter your Ethereum address for withdrawal: " ethereum_address
+    validator_min_file="$INSTALLATION_PATH/validator_min"
+    validator_max_file="$INSTALLATION_PATH/validator_max"
+    echo 0 > $validator_min_file
+    echo $validator_max > $validator_max_file
+    echo ""
+    echo "In this step, you will create your validator keys."
+    echo "Information for creating validator keys:"
+    echo -n "- Your mnemonic: "
+    cat $INSTALLATION_PATH/mnemonic.txt
+    echo
+    echo "- Your Validator Start Index: 0"
+    echo "- Your Validator Count: $validator_max"
+    echo "- Your Ethereum Address: $ethereum_address"
+    echo ""
+    read -p "Continue installation? (y/n)? " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1 
+    mkdir -p $INSTALLATION_PATH/validator_keys
+    docker run -it --rm --user $(id -u):$(id -g) -v $INSTALLATION_PATH/validator_keys:/app/validator_keys ghcr.io/davinchi-protocol/da-stake:main existing-mnemonic --num_validators=$validator_max --validator_start_index=0 --eth1_withdrawal_address=$ethereum_address
     if [ $? -ne 0 ]; then
         return 1
     fi
-    echo $(expr $validator_count_last + $validator_count) > "$validator_count_file"
-    read -p "Enter the password: " password
+    read -p "Enter the password again: " password
     echo "$password" > $INSTALLATION_PATH/metadata/password.txt
     return 0
 }
 
 davinci_validator_deposit(){
-    amount=32000000000
-    smin=validator_count
-    smax=validator_latest_index
+    read -p "Enter your Ethereum address funder: " funder_address
+    read -p "Enter the private key of the funder: " funder_private_key
+    latest_file=$(ls $INSTALLATION_PATH/validator_keys/deposit_data-*.json | sort -t '-' -k 3 -n | tail -n 1)
+    
+    array_length=$(jq '. | length' $latest_file)
+    for (( i=0; i<$array_length; i++ )); do
+        amount=$(jq -r ".[$i].amount" $latest_file)
+        pubkey=$(jq -r ".[$i].pubkey" $latest_file)
+        jq 'map(del(.fork_version))' "$latest_file" > $INSTALLATION_PATH/temp_validator
+        data=$(jq -r ".[$i]" $INSTALLATION_PATH/temp_validator)
+        echo "Sending deposit for validator $i with pubkey $pubkey"
+        ethereal beacon deposit \
+            --allow-unknown-contract=true \
+            --address="0xdeadbeef00000000000000000000000000000000" \
+            --connection="https://rpc.davinci.bz" \
+            --data="$data" \
+            --allow-excessive-deposit \
+            --value="$amount" \
+            --from="$funder_address" \
+            --privatekey="$funder_private_key" \
+            --wait="true" \
+            --verbose
+        sleep 2
+        rm -rf $INSTALLATION_PATH/temp_validator
 
-eth2-val-tools deposit-data \
-  --source-min=$smin \
-  --source-max=$smax \
-  --amount=$amount \
-  --fork-version=0x10000293 \
-  --withdrawals-mnemonic="test test test test test test test test test test test junk" \
-  --validators-mnemonic="test test test test test test test test test test test junk" > mainnet_deposit_$smin\_$smax.txt
-
+    done
 }
 
 checkpoint_file="/tmp/davinci-node-validator-checkpoint"
@@ -222,6 +245,7 @@ if [ "$last_checkpoint" -eq "2" ]; then
         echo "Davinci Validator failed."
         exit 1
     fi
+    update_checkpoint "3"
 fi
 
 last_checkpoint=$(read_checkpoint)
@@ -229,11 +253,15 @@ last_checkpoint=$(read_checkpoint)
 if [ "$last_checkpoint" -eq "3" ]; then
     echo ""
     echo "Depositing Davinci Validator..."
-    if davinci_validator_start; then
-        echo "Davinci Validator started successfully."
+    if davinci_validator_deposit; then
+        echo "Please check manually if the deposit is successful."
+        echo ""
     else
         echo ""
-        echo "Davinci Validator start failed."
+        echo "Deposit failed, please check manually."
         exit 1
     fi
+    update_checkpoint "4"
 fi
+
+echo "Davinci Node Validator installation completed successfully."
